@@ -1029,7 +1029,7 @@ async function renderOrders(){
         <td><select class="order-status" data-order-id="${o.id}">
           ${['pending','confirmed','shipped','delivered','cancelled'].map(s=>`<option value="${s}" ${o.status===s?'selected':''}>${orderStatusLabel(s)}</option>`).join('')}
         </select></td>
-        <td><button type="button" class="btn btn-outline small-btn" data-view-order="${o.id}">${document.documentElement.lang==='ar'?'التفاصيل':'Details'}</button>${o.paymentStatus!=='paid'?` <button type="button" class="btn small-btn" data-pay-order="${o.id}">${document.documentElement.lang==='ar'?'تأكيد الدفع':'Mark paid'}</button>`:''}</td>`;
+        <td><button type="button" class="btn btn-outline small-btn" data-view-order="${o.id}">${document.documentElement.lang==='ar'?'التفاصيل':'Details'}</button>${o.paymentStatus!=='paid' && String(o.status||'').toLowerCase()!=='cancelled'?` <button type="button" class="btn small-btn" data-pay-order="${o.id}">${document.documentElement.lang==='ar'?'تأكيد الدفع':'Mark paid'}</button>`:''}${String(o.status||'').toLowerCase()==='cancelled'?` <button type="button" class="btn btn-danger small-btn" data-delete-cancelled-order="${o.id}">${document.documentElement.lang==='ar'?'إزالة الطلب':'Remove order'}</button>`:''}</td>`;
       tbody.appendChild(tr);
     });
     tbody.querySelectorAll('.order-status').forEach(sel=>sel.addEventListener('change',async()=>{
@@ -1046,6 +1046,28 @@ async function renderOrders(){
     }));
     tbody.querySelectorAll('[data-view-order]').forEach(btn=>btn.addEventListener('click',()=>{
       if(btn.dataset.viewOrder) location.href=`order-details.html?id=${encodeURIComponent(btn.dataset.viewOrder)}`;
+    }));
+    tbody.querySelectorAll('[data-delete-cancelled-order]').forEach(btn=>btn.addEventListener('click',async()=>{
+      const id=btn.dataset.deleteCancelledOrder;
+      if(!id)return;
+      const ar=document.documentElement.lang==='ar';
+      if(!confirm(ar?'هل أنت متأكد من إزالة هذا الطلب الملغي نهائيًا؟ لا يمكن التراجع عن هذه الخطوة.':'Permanently remove this cancelled order? This action cannot be undone.'))return;
+      btn.disabled=true;
+      try{
+        const latest=await getDoc(doc(db,'orders',id));
+        if(!latest.exists()){showToast('الطلب غير موجود.','Order no longer exists.');await renderOrders();return;}
+        if(String(latest.data().status||'').toLowerCase()!=='cancelled'){
+          showToast('يمكن إزالة الطلبات الملغاة فقط.','Only cancelled orders can be removed.');
+          await renderOrders();return;
+        }
+        await deleteDoc(doc(db,'orders',id));
+        showToast('تمت إزالة الطلب الملغي.','Cancelled order removed.');
+        await renderOrders();
+      }catch(e){
+        console.error(e);
+        showToast('تعذر إزالة الطلب. تحقق من الصلاحيات وحاول مرة أخرى.','Could not remove order. Check permissions and try again.');
+        btn.disabled=false;
+      }
     }));
   }catch(e){
     console.error(e);
@@ -1335,6 +1357,92 @@ function renderOrderPage(order){
   content.innerHTML=`<div class="order-page-hero"><div><a class="back" href="admin.html#orders">${ar?'← العودة إلى الطلبات':'← Back to orders'}</a><span class="eyebrow">ORDER DETAILS</span><h2>#${escapeHtml(order.orderNumber||order.id.slice(0,8).toUpperCase())}</h2><p>${formatOrderDate(order.createdAt)}</p></div><span class="status-pill ${order.status==='cancelled'?'out':''}">${orderStatusLabel(order.status)}</span></div><div class="order-page-grid"><section class="order-page-card"><span class="option-label">${ar?'بيانات العميل':'Customer details'}</span><strong>${escapeHtml(customer.name||'—')}</strong><a href="tel:${escapeHtml(customer.phone||'')}">${escapeHtml(customer.phone||'—')}</a><span>${escapeHtml(customer.governorate||'—')}</span><span>${escapeHtml(customer.address||'—')}</span>${customer.notes?`<p>${ar?'ملاحظات:':'Notes:'} ${escapeHtml(customer.notes)}</p>`:''}</section><section class="order-page-card"><span class="option-label">${ar?'الدفع والشحن':'Payment & shipping'}</span><span>${ar?'طريقة الدفع':'Payment method'}: <strong>${order.paymentMethod==='instapay'?'InstaPay':escapeHtml(order.paymentMethod||'—')}</strong></span><span>${ar?'حالة الدفع':'Payment status'}: <strong>${order.paymentStatus==='paid'?(ar?'مدفوع':'Paid'):(ar?'قيد المراجعة':'Pending')}</strong></span>${order.paymentReference?`<span>${ar?'مرجع التحويل':'Transfer reference'}: <strong>${escapeHtml(order.paymentReference)}</strong></span>`:''}<span>${ar?'التوصيل المتوقع':'Estimated delivery'}: <strong>${escapeHtml(order.deliveryEstimate||'—')}</strong></span></section></div><section class="order-page-card order-page-items"><div class="order-page-section-head"><div><span class="option-label">${ar?'المنتجات':'Items'}</span><h3>${ar?'محتويات الطلب':'Order items'}</h3></div><span>${items.length} ${ar?'منتج':'items'}</span></div><div class="order-page-items-list">${itemsHtml}</div></section><section class="order-page-card"><div class="order-page-section-head"><div><span class="option-label">${ar?'ملخص الدفع':'Payment summary'}</span><h3>${ar?'إجمالي العملية':'Order total'}</h3></div></div><div class="order-page-total"><span>${ar?'المجموع الفرعي':'Subtotal'}<b>${Number(order.subtotal||0).toLocaleString()} EGP</b></span><span>${ar?'الشحن':'Shipping'}<b>${Number(order.shipping||0).toLocaleString()} EGP</b></span><strong>${ar?'الإجمالي':'Total'}<b>${Number(order.total||0).toLocaleString()} EGP</b></strong></div></section></div>`;
 }
 
+const LAVERA_UPLOAD_SOURCE_LIMIT = 10 * 1024 * 1024;
+const LAVERA_FIRESTORE_IMAGE_TARGET = 600 * 1024;
+
+function canvasToBlob(canvas, type, quality) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Image compression failed.')), type, quality);
+  });
+}
+
+async function compressUploadedProductImage(file) {
+  if (!(file instanceof File) || file.size <= 0) return '';
+  if (!file.type.startsWith('image/')) throw new Error('الملف المختار مش صورة صالحة.');
+
+  // Keep small uploads unchanged. Firestore stores the Data URL inside a document,
+  // so larger uploads must be compressed well below its 1 MiB document limit.
+  if (file.size <= 400 * 1024) {
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(reader.error || new Error('Could not read image.'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  let bitmap;
+  let objectUrl = '';
+  try {
+    if ('createImageBitmap' in window) {
+      bitmap = await createImageBitmap(file);
+    } else {
+      objectUrl = URL.createObjectURL(file);
+      bitmap = await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('تعذر فتح الصورة لضغطها.'));
+        img.src = objectUrl;
+      });
+    }
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d', { alpha: true });
+    if (!ctx) throw new Error('تعذر تجهيز الصورة للضغط.');
+
+    let scale = Math.min(1, 2200 / Math.max(bitmap.width, bitmap.height));
+    let blob = null;
+    const outputType = file.type === 'image/png' && file.size < 900 * 1024 ? 'image/png' : 'image/webp';
+
+    // Reduce quality first, then dimensions if needed, until safely below Firestore's limit.
+    for (let dimensionPass = 0; dimensionPass < 7; dimensionPass++) {
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+
+      const qualities = outputType === 'image/png' ? [undefined] : [0.86, 0.78, 0.68, 0.58, 0.48];
+      for (const quality of qualities) {
+        blob = await canvasToBlob(canvas, outputType, quality);
+        if (blob.size <= LAVERA_FIRESTORE_IMAGE_TARGET) break;
+      }
+      if (blob && blob.size <= LAVERA_FIRESTORE_IMAGE_TARGET) break;
+      scale *= 0.78;
+    }
+
+    if (!blob || blob.size > LAVERA_FIRESTORE_IMAGE_TARGET) {
+      throw new Error('الصورة كبيرة جدًا وتعذر ضغطها للحجم المناسب. جرّب صورة أصغر.');
+    }
+
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(reader.error || new Error('Could not read compressed image.'));
+      reader.readAsDataURL(blob);
+    });
+
+    const sourceMb = (file.size / (1024 * 1024)).toFixed(2);
+    const outputKb = Math.round(blob.size / 1024);
+    if (file.size > LAVERA_UPLOAD_SOURCE_LIMIT || blob.size < file.size * 0.85) {
+      showToast(`تم ضغط الصورة تلقائيًا من ${sourceMb}MB إلى ${outputKb}KB للحفظ بأمان.`, `Image compressed from ${sourceMb}MB to ${outputKb}KB for safe storage.`);
+    }
+    return dataUrl;
+  } finally {
+    if (bitmap && typeof bitmap.close === 'function') bitmap.close();
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+  }
+}
+
 async function initDashboard(){
  if(!(await ensureAdmin()))return;
  document.querySelectorAll('[data-section]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();const name=a.dataset.section;document.querySelectorAll('.dash-section').forEach(s=>s.classList.remove('active'));document.getElementById('section-'+name)?.classList.add('active');document.querySelectorAll('.dash-nav a').forEach(x=>x.classList.toggle('active',x===a));const title=document.getElementById('dashTitle'),b=a.querySelector('b');if(title&&b)title.innerHTML=b.innerHTML;history.replaceState(null,'','#'+name);document.getElementById('dashboardSidebar')?.classList.remove('open');if(name==='orders')renderOrders();if(name==='messages')renderMessages();if(name==='reviews')renderReviewsAdmin();if(name==='finance')getOrdersFromFirestore().then(renderFinance).catch(err=>console.error(err))}));
@@ -1360,27 +1468,19 @@ async function initDashboard(){
 
   let image='';
 
-  /*
-   * تحويل الصورة المختارة من الجهاز
-   * إلى Data URL حتى يمكن حفظها داخل Firestore
-   */
+  // Only newly selected user uploads are processed. Existing project assets,
+  // gallery URLs, and the previous product image are left untouched.
   if(imageFile instanceof File && imageFile.size>0){
-
-    image=await new Promise((resolve,reject)=>{
-
-      const reader=new FileReader();
-
-      reader.onload=()=>{
-        resolve(reader.result);
-      };
-
-      reader.onerror=()=>{
-        reject(reader.error);
-      };
-
-      reader.readAsDataURL(imageFile);
-
-    });
+    try {
+      image=await compressUploadedProductImage(imageFile);
+    } catch (imageError) {
+      console.error('Product image processing failed:', imageError);
+      showToast(
+        imageError?.message || 'تعذر ضغط الصورة. جرّب صورة أخرى.',
+        'Could not compress this image. Please try another image.'
+      );
+      return;
+    }
   }
 
   /*
