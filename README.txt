@@ -21,7 +21,7 @@ Stock behavior:
 
 Deployment:
 1) In the project root run: firebase login
-2) Run: firebase deploy --only functions,firestore
+2) Run: firebase deploy --only hosting,firestore
 3) Keep the existing Firebase web config in js/firebase.js.
 
 Client-facing error messages never expose Firebase/Firestore details.
@@ -35,3 +35,6 @@ V11 FIX: Large base64 product images are no longer copied into Firestore order d
 
 
 V12 NOTIFICATIONS: Dashboard uses Firestore realtime listeners for new orders/messages/reviews. A professional admin bell plays for new incoming activity. The Overview notification center is inventory-only. A stock alarm plays when product stock crosses into low stock (<=5 total) or reaches zero. No Cloud Functions.
+
+
+Design/performance update (2026-10-16): The visual customization module and alternate skin were removed. The site now uses one fixed Noir Atelier premium identity. Mobile layout, font loading, image loading, and scroll effects were streamlined.
