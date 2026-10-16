@@ -64,7 +64,7 @@ function startIntro(){
   if(document.querySelector('.lavera-intro'))return;
   const en=document.documentElement.lang==='en';
   const o=document.createElement('div');o.className='lavera-intro';
-  o.innerHTML=`<i class="li-curtain li-l"></i><i class="li-curtain li-r"></i><div class="li-c"><div class="li-kicker">MAISON DE LINGERIE · EST. 2026</div><div class="li-brand">${[...'LAVÉRA'].map((c,i)=>`<span style="--i:${i}">${escapeHtml(c)}</span>`).join('')}</div><div class="li-line"></div><p class="li-tag">${en?'Quiet luxury, made to be felt.':'فخامة هادئة، تُحَسّ قبل أن تُرى.'}</p><button type="button" class="li-enter">${en?'ENTER THE ATELIER':'ادخلي إلى العالم'} ↗</button></div><div class="li-bar"><i></i></div>`;
+  o.innerHTML=`<i class="li-curtain li-l"></i><i class="li-curtain li-r"></i><div class="li-c"><div class="li-kicker">MAISON DE LINGERIE · EST. 2026</div><div class="li-brand">${[...'LAVÉRA'].map((c,i)=>`<span style="--i:${i}">${c}</span>`).join('')}</div><div class="li-line"></div><p class="li-tag">${en?'Quiet luxury, made to be felt.':'فخامة هادئة، تُحَسّ قبل أن تُرى.'}</p><button type="button" class="li-enter">${en?'ENTER THE ATELIER':'ادخلي إلى العالم'} ↗</button></div><div class="li-bar"><i></i></div>`;
   document.body.appendChild(o);document.body.classList.add('lavera-intro-lock');
   let done=false;
   const close=()=>{if(done)return;done=true;o.classList.add('is-open');setTimeout(()=>{o.remove();document.body.classList.remove('lavera-intro-lock')},1100)};
@@ -150,17 +150,12 @@ function applyLang(lang){
  const b=document.getElementById('langBtn');if(b)b.textContent=lang==='ar'?'EN':'AR';
  localStorage.setItem('laveraLang',lang);updateCart();updateVariantLabels();if(document.querySelector('.product-page')?._product)initReviews(document.querySelector('.product-page'),document.querySelector('.product-page')._product.id);if(document.body.classList.contains('dashboard-body')){renderOrders();renderMessages();renderReviewsAdmin();Promise.all([getOrdersFromFirestore(),getProductsFromFirestore()]).then(([o,p])=>{renderFinance(o);renderNotifications(o,p)}).catch(()=>{});}
 }
-function safeImageUrl(u){u=String(u||'');if(/^data:image\/(png|jpe?g|webp|gif|avif);base64,/i.test(u))return u;try{const x=new URL(u,location.href);if(x.protocol==='https:'||x.protocol==='http:'||x.origin===location.origin)return u}catch{}return '';}
 function getCartItems(){
   try{
     const raw=localStorage.getItem('laveraCartItems');
     if(raw){
       const parsed=JSON.parse(raw);
-      if(Array.isArray(parsed)) return parsed.slice(0,50).filter(i=>i&&typeof i==='object').map(i=>({
-        id:String(i.id||'').slice(0,150),name:String(i.name||'').slice(0,200),
-        price:Math.max(0,Number(i.price)||0),image:safeImageUrl(i.image),
-        color:String(i.color||'').slice(0,60),size:String(i.size||'').slice(0,10),
-        quantity:Math.min(20,Math.max(1,Math.floor(Number(i.quantity))||1))})).filter(i=>i.id);
+      if(Array.isArray(parsed)) return parsed;
     }
   }catch(e){console.warn('Cart read failed',e);}
   // Backward compatibility with the old count-only cart.
@@ -227,8 +222,8 @@ function renderCart(){
     const meta=[item.color,item.size].filter(Boolean).join(' · ');
     const article=document.createElement('article');
     article.className='cart-item';
-    article.innerHTML=`<div class="cart-thumb"><img src="${escapeHtml(item.image||'../Images/product-black.jpg')}" alt="${escapeHtml(item.name||'')}"></div>
-      <div><h3>${escapeHtml(item.name||'Product')}</h3><div class="cart-meta">${meta||''}</div>
+    article.innerHTML=`<div class="cart-thumb"><img src="${item.image||'../Images/product-black.jpg'}" alt="${item.name||''}"></div>
+      <div><h3>${item.name||'Product'}</h3><div class="cart-meta">${meta||''}</div>
       <div class="qty"><button type="button" data-qty-minus>−</button><span>${qty}</span><button type="button" data-qty-plus>+</button></div></div>
       <div class="cart-price"><strong>${lineTotal.toLocaleString()} EGP</strong><br><button class="remove" type="button" data-remove data-ar="حذف" data-en="Remove">حذف</button></div>`;
     list.appendChild(article);
@@ -342,7 +337,7 @@ window.applyShopFilter=function(category){document.querySelectorAll('.filters bu
 function addVariantRow(data={color:'black',size:'M',qty:0}){
  const wrap=document.getElementById('variants');if(!wrap)return;
  const row=document.createElement('div');row.className='variant-row';
- row.innerHTML=`<input name="color" value="${escapeHtml(data.color)}" placeholder="أسود / Black"><select name="size"><option ${data.size==='S'?'selected':''}>S</option><option ${data.size==='M'?'selected':''}>M</option><option ${data.size==='L'?'selected':''}>L</option><option ${data.size==='XL'?'selected':''}>XL</option></select><input name="qty" type="number" min="0" value="${data.qty}" placeholder="0"><button type="button" class="remove-row" aria-label="remove">×</button>`;
+ row.innerHTML=`<input name="color" value="${data.color}" placeholder="أسود / Black"><select name="size"><option ${data.size==='S'?'selected':''}>S</option><option ${data.size==='M'?'selected':''}>M</option><option ${data.size==='L'?'selected':''}>L</option><option ${data.size==='XL'?'selected':''}>XL</option></select><input name="qty" type="number" min="0" value="${data.qty}" placeholder="0"><button type="button" class="remove-row" aria-label="remove">×</button>`;
  wrap.appendChild(row);
  row.querySelector('.remove-row').onclick=()=>{row.remove();updateStockTotal()};
  row.querySelectorAll('input,select').forEach(i=>i.addEventListener('input',updateStockTotal));
@@ -400,8 +395,6 @@ async function initAdminLogin(){
  const form=document.getElementById('adminLoginForm');if(!form)return;
  form.addEventListener('submit',async e=>{
   e.preventDefault();
-  const lock=loginLockRemaining();
-  if(lock>0){showToast(`محاولات كثيرة. حاول بعد ${lock} ثانية.`,`Too many attempts. Try again in ${lock}s.`);return;}
   const f=new FormData(form);
   try{
    const credential=await signInWithEmailAndPassword(auth,String(f.get('email')).trim(),String(f.get('password')));
@@ -412,8 +405,8 @@ async function initAdminLogin(){
     showToast('هذا الحساب غير مصرح له بدخول لوحة التحكم.','This account is not authorized to access the dashboard.');
    }
   }catch(err){
-   registerLoginFailure();
-   showToast('بيانات الدخول غير صحيحة.','Incorrect credentials.');
+   console.error(err);
+   showToast('بيانات الدخول غير صحيحة أو الحساب غير موجود.','Incorrect credentials or account not found.');
   }
  });
  document.getElementById('googleAdminLogin')?.addEventListener('click',async()=>{
@@ -431,8 +424,6 @@ async function initAdminLogin(){
   }
  });
 }
-function loginLockRemaining(){try{const d=JSON.parse(sessionStorage.getItem('laveraLoginFail')||'{}');return Math.max(0,Math.ceil(((d.until)||0)-Date.now())/1000|0)}catch{return 0}}
-function registerLoginFailure(){try{const d=JSON.parse(sessionStorage.getItem('laveraLoginFail')||'{}');const n=(d.n||0)+1;sessionStorage.setItem('laveraLoginFail',JSON.stringify({n,until:n>=5?Date.now()+Math.min(900,30*2**(n-5))*1000:0}))}catch{}}
 async function ensureAdmin(){
  if(!document.body.classList.contains('dashboard-body'))return true;
  return new Promise(resolve=>{
@@ -456,7 +447,7 @@ async function ensureAdmin(){
 }
 function variantRow(data={color:'أسود',size:'M',qty:0}){
  const row=document.createElement('div');row.className='dash-variant-row';
- row.innerHTML=`<input name="vcolor" value="${escapeHtml(data.color||'')}" placeholder="أسود / Black"><select name="vsize"><option ${data.size==='S'?'selected':''}>S</option><option ${data.size==='M'?'selected':''}>M</option><option ${data.size==='L'?'selected':''}>L</option><option ${data.size==='XL'?'selected':''}>XL</option></select><input name="vqty" type="number" min="0" value="${Number(data.qty)||0}"><button type="button" aria-label="remove">×</button>`;
+ row.innerHTML=`<input name="vcolor" value="${String(data.color||'').replace(/"/g,'&quot;')}" placeholder="أسود / Black"><select name="vsize"><option ${data.size==='S'?'selected':''}>S</option><option ${data.size==='M'?'selected':''}>M</option><option ${data.size==='L'?'selected':''}>L</option><option ${data.size==='XL'?'selected':''}>XL</option></select><input name="vqty" type="number" min="0" value="${Number(data.qty)||0}"><button type="button" aria-label="remove">×</button>`;
  row.querySelector('button').onclick=()=>{row.remove();updateModalTotal()};row.querySelectorAll('input,select').forEach(x=>x.addEventListener('input',updateModalTotal));return row;
 }
 function updateModalTotal(){let total=0;document.querySelectorAll('#modalVariants .dash-variant-row [name=vqty]').forEach(x=>total+=Math.max(0,Number(x.value)||0));const el=document.getElementById('modalStockTotal');if(el)el.textContent=total.toLocaleString()}
@@ -493,8 +484,8 @@ async function renderNotifications(_orders, products){
   wrap.innerHTML=lowItems.map(item=>{
     const out=item.stock===0;
     const label=out
-      ?(ar?`نفد مخزون «${escapeHtml(item.name)}»`:`“${escapeHtml(item.name)}” is out of stock`)
-      :(ar?`مخزون «${escapeHtml(item.name)}» منخفض — متبقي ${item.stock} قطع`:`“${escapeHtml(item.name)}” is low — ${item.stock} unit${item.stock===1?'':'s'} left`);
+      ?(ar?`نفد مخزون «${item.name}»`:`“${item.name}” is out of stock`)
+      :(ar?`مخزون «${item.name}» منخفض — متبقي ${item.stock} قطع`:`“${item.name}” is low — ${item.stock} unit${item.stock===1?'':'s'} left`);
     return `<button class="notification-row ${out?'is-out':'is-low'}" type="button" data-notify-section="inventory"><i>${out?'×':'!'}</i><span>${escapeHtml(label)}</span><b>↗</b></button>`;
   }).join('');
   wrap.querySelectorAll('[data-notify-section]').forEach(b=>b.onclick=()=>document.querySelector(`[data-section="${b.dataset.notifySection}"]`)?.click());
@@ -586,8 +577,8 @@ function startDashboardRealtime(){
         if(crossedLow||becameOut){
           if(window.LAVERA_SOUNDS?.stockAlarm)window.LAVERA_SOUNDS.stockAlarm();
           showToast(
-            becameOut ? `نفد مخزون ${escapeHtml(p.name||'المنتج')}.` : `تحذير مخزون: ${escapeHtml(p.name||'المنتج')} متبقي منه ${stock} قطع.`,
-            becameOut ? `${escapeHtml(p.name||'Product')} is out of stock.` : `Stock warning: ${escapeHtml(p.name||'Product')} has only ${stock} units left.`
+            becameOut ? `نفد مخزون ${p.name||'المنتج'}.` : `تحذير مخزون: ${p.name||'المنتج'} متبقي منه ${stock} قطع.`,
+            becameOut ? `${p.name||'Product'} is out of stock.` : `Stock warning: ${p.name||'Product'} has only ${stock} units left.`
           );
         }
       }
@@ -609,14 +600,14 @@ async function renderDashboard(){
  const q=(document.getElementById('productSearch')?.value||'').toLowerCase(),cat=document.getElementById('productFilter')?.value||'all';tbody.innerHTML='';
  products.filter(p=>(!q||String(p.name||'').toLowerCase().includes(q))&&(cat==='all'||p.category===cat)).forEach(p=>{
   const stock=totalStock(p),colors=[...new Set((p.variants||[]).map(v=>v.color))],sizes=[...new Set((p.variants||[]).map(v=>v.size))],tr=document.createElement('tr');
-  tr.innerHTML=`<td><div class="table-product"><img src="${escapeHtml(p.image||'../Images/product-black.jpg')}" alt=""><div><strong>${escapeHtml(p.name)}</strong><small>${categoryLabel(p.category)}</small></div></div></td><td>${Number(p.price||0).toLocaleString()} EGP</td><td>${colors.length}</td><td>${sizes.join(' · ')||'—'}</td><td><strong>${stock}</strong></td><td><span class="status-pill ${stock===0?'out':stock<=5?'low':''}">${stock===0?(lang==='ar'?'نفد':'Out of stock'):stock<=5?(lang==='ar'?'منخفض':'Low'):(lang==='ar'?'متوفر':'Active')}</span></td><td><div class="row-actions"><button type="button" data-edit="${escapeHtml(p.id)}">✎</button><button type="button" data-delete="${escapeHtml(p.id)}">×</button></div></td>`;
+  tr.innerHTML=`<td><div class="table-product"><img src="${p.image||'../Images/product-black.jpg'}" alt=""><div><strong>${p.name}</strong><small>${categoryLabel(p.category)}</small></div></div></td><td>${Number(p.price||0).toLocaleString()} EGP</td><td>${colors.length}</td><td>${sizes.join(' · ')||'—'}</td><td><strong>${stock}</strong></td><td><span class="status-pill ${stock===0?'out':stock<=5?'low':''}">${stock===0?(lang==='ar'?'نفد':'Out of stock'):stock<=5?(lang==='ar'?'منخفض':'Low'):(lang==='ar'?'متوفر':'Active')}</span></td><td><div class="row-actions"><button type="button" data-edit="${p.id}">✎</button><button type="button" data-delete="${p.id}">×</button></div></td>`;
   tbody.appendChild(tr);
  });
  tbody.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openProductModal(products.find(x=>x.id===b.dataset.edit)));
  tbody.querySelectorAll('[data-delete]').forEach(b=>b.onclick=async()=>{if(confirm(lang==='ar'?'متأكد إنك عايز تمسح المنتج؟':'Delete this product?')){try{await deleteDoc(doc(db,'products',b.dataset.delete));await renderDashboard();showToast('تم حذف المنتج.','Product deleted.')}catch(e){console.error(e);showToast('تعذر حذف المنتج.','Could not delete product.')}}});
  const count=products.length,low=products.filter(p=>{const s=totalStock(p);return s>0&&s<=5}).length,out=products.filter(p=>totalStock(p)===0).length;
  ['statProducts','healthyCount'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=id==='statProducts'?count:count-low-out});['statLow','lowCount2'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=low});const o=document.getElementById('outCount');if(o)o.textContent=out;
- const recent=document.getElementById('recentProducts');if(recent){recent.innerHTML='';products.slice(0,4).forEach(p=>{const d=document.createElement('div');d.className='mini-product';d.innerHTML=`<img src="${escapeHtml(p.image||'../Images/product-black.jpg')}" alt=""><div><strong>${escapeHtml(p.name)}</strong><small>${Number(p.price||0).toLocaleString()} EGP · ${totalStock(p)} ${lang==='ar'?'قطعة':'units'}</small></div>`;recent.appendChild(d)})}
+ const recent=document.getElementById('recentProducts');if(recent){recent.innerHTML='';products.slice(0,4).forEach(p=>{const d=document.createElement('div');d.className='mini-product';d.innerHTML=`<img src="${p.image||'../Images/product-black.jpg'}" alt=""><div><strong>${p.name}</strong><small>${Number(p.price||0).toLocaleString()} EGP · ${totalStock(p)} ${lang==='ar'?'قطعة':'units'}</small></div>`;recent.appendChild(d)})}
  renderInventory(products);
  const orders=await getOrdersFromFirestore().catch(()=>[]);
  const pending=orders.filter(o=>o.status==='pending').length,unpaid=orders.filter(o=>o.paymentStatus!=='paid'&&o.status!=='cancelled').length;
@@ -676,7 +667,7 @@ async function renderFinance(orders){
     const netA=document.getElementById('annualNet'),netS=document.getElementById('sixNet');
     [netA,netS].forEach(e=>{if(e)e.classList.toggle('negative',Number((e?.textContent||'').replace(/[^0-9.-]/g,''))<0)});
     const list=document.getElementById('expensesList');
-    if(list){list.innerHTML=expenses.slice(0,12).map(e=>`<article class="expense-row"><div><strong>${escapeHtml(e.title||'Expense')}</strong><small>${escapeHtml(e.category||'Other')} · ${escapeHtml(e.date||'—')}</small></div><b>${money(e.amount)}</b><button class="row-delete" type="button" data-delete-expense="${escapeHtml(e.id)}">×</button></article>`).join('') || `<div class="empty-admin"><span>◌</span><h2>${document.documentElement.lang==='ar'?'لا توجد مصروفات':'No expenses yet'}</h2><p>${document.documentElement.lang==='ar'?'أضف أول مصروف لتبدأ حساب صافي الربح.':'Add your first expense to calculate net profit.'}</p></div>`;
+    if(list){list.innerHTML=expenses.slice(0,12).map(e=>`<article class="expense-row"><div><strong>${escapeHtml(e.title||'Expense')}</strong><small>${escapeHtml(e.category||'Other')} · ${escapeHtml(e.date||'—')}</small></div><b>${money(e.amount)}</b><button class="row-delete" type="button" data-delete-expense="${e.id}">×</button></article>`).join('') || `<div class="empty-admin"><span>◌</span><h2>${document.documentElement.lang==='ar'?'لا توجد مصروفات':'No expenses yet'}</h2><p>${document.documentElement.lang==='ar'?'أضف أول مصروف لتبدأ حساب صافي الربح.':'Add your first expense to calculate net profit.'}</p></div>`;
       list.querySelectorAll('[data-delete-expense]').forEach(b=>b.onclick=async()=>{if(!confirm(document.documentElement.lang==='ar'?'حذف هذا المصروف؟':'Delete this expense?'))return;await deleteDoc(doc(db,'expenses',b.dataset.deleteExpense));await renderFinance(orders);showToast('تم حذف المصروف.','Expense deleted.')});
     }
     const chart=document.getElementById('financeChart');
@@ -922,7 +913,7 @@ async function initCheckout(){
   const deliverySummaryEl=document.getElementById('deliveryEstimateSummary');
   const governorateEl=document.getElementById('governorate');
   if(!items.length){location.href='cart.html';return;}
-  if(itemsEl)itemsEl.innerHTML=items.map(i=>`<div class="checkout-item"><span>${escapeHtml(i.name)} × ${i.quantity}</span><strong>${((Number(i.price)||0)*(Number(i.quantity)||0)).toLocaleString()} EGP</strong></div>`).join('');
+  if(itemsEl)itemsEl.innerHTML=items.map(i=>`<div class="checkout-item"><span>${i.name} × ${i.quantity}</span><strong>${((Number(i.price)||0)*(Number(i.quantity)||0)).toLocaleString()} EGP</strong></div>`).join('');
   const refresh=()=>{
     const totals=cartTotals(items,governorateEl?.value||'');
     if(subtotalEl)subtotalEl.textContent=`${totals.subtotal.toLocaleString()} EGP`;
@@ -1031,14 +1022,14 @@ async function renderOrders(){
     const tbody=document.getElementById('ordersTableBody');
     orders.forEach(o=>{
       const tr=document.createElement('tr');
-      tr.innerHTML=`<td><strong>#${escapeHtml(o.orderNumber||o.id.slice(0,8).toUpperCase())}</strong><small class="order-items-count">${(o.items||[]).reduce((s,i)=>s+(Number(i.quantity)||0),0)} ${document.documentElement.lang==='ar'?'قطعة':'items'}</small></td>
-        <td><strong>${escapeHtml(o.customer?.name||'—')}</strong><small>${escapeHtml(o.customer?.phone||'')}</small></td>
+      tr.innerHTML=`<td><strong>#${o.orderNumber||o.id.slice(0,8).toUpperCase()}</strong><small class="order-items-count">${(o.items||[]).reduce((s,i)=>s+(Number(i.quantity)||0),0)} ${document.documentElement.lang==='ar'?'قطعة':'items'}</small></td>
+        <td><strong>${o.customer?.name||'—'}</strong><small>${o.customer?.phone||''}</small></td>
         <td><strong>${Number(o.total||0).toLocaleString()} EGP</strong><small>${o.paymentStatus==='paid'?'✓ '+(document.documentElement.lang==='ar'?'مدفوع':'Paid'):(document.documentElement.lang==='ar'?'في انتظار الدفع':'Payment pending')}</small></td>
         <td>${formatOrderDate(o.createdAt)}</td>
-        <td><select class="order-status" data-order-id="${escapeHtml(o.id)}">
-          ${['pending','confirmed','shipped','delivered','cancelled'].map(s=>`<option value="${escapeHtml(s)}" ${o.status===s?'selected':''}>${orderStatusLabel(s)}</option>`).join('')}
+        <td><select class="order-status" data-order-id="${o.id}">
+          ${['pending','confirmed','shipped','delivered','cancelled'].map(s=>`<option value="${s}" ${o.status===s?'selected':''}>${orderStatusLabel(s)}</option>`).join('')}
         </select></td>
-        <td><button type="button" class="btn btn-outline small-btn" data-view-order="${escapeHtml(o.id)}">${document.documentElement.lang==='ar'?'التفاصيل':'Details'}</button>${o.paymentStatus!=='paid'?` <button type="button" class="btn small-btn" data-pay-order="${escapeHtml(o.id)}">${document.documentElement.lang==='ar'?'تأكيد الدفع':'Mark paid'}</button>`:''}</td>`;
+        <td><button type="button" class="btn btn-outline small-btn" data-view-order="${o.id}">${document.documentElement.lang==='ar'?'التفاصيل':'Details'}</button>${o.paymentStatus!=='paid'?` <button type="button" class="btn small-btn" data-pay-order="${o.id}">${document.documentElement.lang==='ar'?'تأكيد الدفع':'Mark paid'}</button>`:''}</td>`;
       tbody.appendChild(tr);
     });
     tbody.querySelectorAll('.order-status').forEach(sel=>sel.addEventListener('change',async()=>{
@@ -1113,7 +1104,7 @@ async function renderMessages() {
       const email = message.email || '—';
       const body = message.message || '—';
       return `
-        <article class="message-card ${isUnread ? 'is-unread' : ''}" data-message-id="${escapeHtml(message.id)}">
+        <article class="message-card ${isUnread ? 'is-unread' : ''}" data-message-id="${message.id}">
           <div class="message-card-head">
             <div class="message-sender">
               <span class="message-avatar">${escapeHtml(name.charAt(0).toUpperCase())}</span>
@@ -1128,14 +1119,14 @@ async function renderMessages() {
             </div>
           </div>
           <p class="message-body">${escapeHtml(body)}</p>
-          <div class="message-reply-box"><textarea data-reply-input="${escapeHtml(message.id)}" placeholder="اكتب رد LAVÉRA...">${escapeHtml(message.adminReply||'')}</textarea><button type="button" class="btn small-btn" data-reply-message="${escapeHtml(message.id)}">${message.adminReply?'تحديث الرد':'الرد على العميل'}</button></div>
+          <div class="message-reply-box"><textarea data-reply-input="${message.id}" placeholder="اكتب رد LAVÉRA...">${escapeHtml(message.adminReply||'')}</textarea><button type="button" class="btn small-btn" data-reply-message="${message.id}">${message.adminReply?'تحديث الرد':'الرد على العميل'}</button></div>
           <div class="message-actions">
-            <button type="button" class="btn btn-outline small-btn" data-toggle-message="${escapeHtml(message.id)}" data-read="${message.read === true}">
+            <button type="button" class="btn btn-outline small-btn" data-toggle-message="${message.id}" data-read="${message.read === true}">
               ${message.read === true
                 ? (document.documentElement.lang === 'ar' ? 'تحديد كغير مقروء' : 'Mark unread')
                 : (document.documentElement.lang === 'ar' ? 'تحديد كمقروء' : 'Mark as read')}
             </button>
-            <button type="button" class="btn btn-danger small-btn" data-delete-message="${escapeHtml(message.id)}">
+            <button type="button" class="btn btn-danger small-btn" data-delete-message="${message.id}">
               ${document.documentElement.lang === 'ar' ? 'حذف' : 'Delete'}
             </button>
           </div>
@@ -1268,7 +1259,7 @@ function initPayment(){
 
   const totalEl=document.getElementById('paymentTotal'), itemsEl=document.getElementById('paymentItems');
   if(totalEl)totalEl.textContent=`${Number(draft.total||0).toLocaleString()} EGP`;
-  if(itemsEl)itemsEl.innerHTML=draft.items.map(i=>`<div class="checkout-item"><span>${escapeHtml(i.name)} × ${i.quantity}</span><strong>${((Number(i.price)||0)*(Number(i.quantity)||0)).toLocaleString()} EGP</strong></div>`).join('');
+  if(itemsEl)itemsEl.innerHTML=draft.items.map(i=>`<div class="checkout-item"><span>${i.name} × ${i.quantity}</span><strong>${((Number(i.price)||0)*(Number(i.quantity)||0)).toLocaleString()} EGP</strong></div>`).join('');
 
   const ipa = window.LAVERA_INSTAPAY_IPA || 'ضع-IPA-البائع-هنا';
   const ipaEl=document.getElementById('instapayIpa');
@@ -1510,11 +1501,11 @@ async function initWishlistPage(){if(!(await requireCustomerAuth()))return;const
 function initShopFromFirestore(){
  const grid=document.querySelector('.shop-grid');if(!grid)return;
  onSnapshot(query(collection(db,'products'),orderBy('createdAt','desc')),snap=>{const products=snap.docs.map(d=>({id:d.id,...d.data()}));if(!products.length)return;grid.innerHTML='';const frag=document.createDocumentFragment();
- products.filter(p=>p.published!==false).forEach(p=>{const card=document.createElement('article');card.className='product';card.dataset.category=p.category||'';const stock=totalStock(p),out=stock===0,stockText=out?(document.documentElement.lang==='ar'?'نفد المخزون':'OUT OF STOCK'):(stock<=5?(document.documentElement.lang==='ar'?`متبقي ${stock} قطع`:`Only ${stock} left`):(document.documentElement.lang==='ar'?`متوفر — ${stock} قطع`:`In stock — ${stock} pieces`));card.innerHTML=`<button type="button" class="wishlist-btn" data-wishlist="${escapeHtml(p.id)}" aria-label="Wishlist">♡</button><a href="product.html?id=${encodeURIComponent(p.id)}"><div class="product-image"><span class="product-badge">${out?(document.documentElement.lang==='ar'?'نفد المخزون':'OUT OF STOCK'):(p.badge||'NEW')}</span><img loading="lazy" decoding="async" src="${escapeHtml(p.image||'../Images/product-black.jpg')}" alt="${escapeHtml(p.name||'')}"></div></a><div class="product-info"><span>${out?(document.documentElement.lang==='ar'?'غير متوفر':'Unavailable'):stockText}</span><h3>${escapeHtml(p.name||'')}</h3><p>${Number(p.price||0).toLocaleString()} EGP</p><div class="product-actions"><a class="btn" href="product.html?id=${encodeURIComponent(p.id)}"><span data-ar="عرض المنتج" data-en="View product">عرض المنتج</span> ↗</a></div></div>`;if(out)card.classList.add('is-out-of-stock');frag.appendChild(card)});grid.appendChild(frag);
+ products.filter(p=>p.published!==false).forEach(p=>{const card=document.createElement('article');card.className='product';card.dataset.category=p.category||'';const stock=totalStock(p),out=stock===0,stockText=out?(document.documentElement.lang==='ar'?'نفد المخزون':'OUT OF STOCK'):(stock<=5?(document.documentElement.lang==='ar'?`متبقي ${stock} قطع`:`Only ${stock} left`):(document.documentElement.lang==='ar'?`متوفر — ${stock} قطع`:`In stock — ${stock} pieces`));card.innerHTML=`<button type="button" class="wishlist-btn" data-wishlist="${p.id}" aria-label="Wishlist">♡</button><a href="product.html?id=${encodeURIComponent(p.id)}"><div class="product-image"><span class="product-badge">${out?(document.documentElement.lang==='ar'?'نفد المخزون':'OUT OF STOCK'):(p.badge||'NEW')}</span><img loading="lazy" decoding="async" src="${p.image||'../Images/product-black.jpg'}" alt="${p.name||''}"></div></a><div class="product-info"><span>${out?(document.documentElement.lang==='ar'?'غير متوفر':'Unavailable'):stockText}</span><h3>${p.name||''}</h3><p>${Number(p.price||0).toLocaleString()} EGP</p><div class="product-actions"><a class="btn" href="product.html?id=${encodeURIComponent(p.id)}"><span data-ar="عرض المنتج" data-en="View product">عرض المنتج</span> ↗</a></div></div>`;if(out)card.classList.add('is-out-of-stock');frag.appendChild(card)});grid.appendChild(frag);
  const countEl=document.querySelector('.toolbar>span');if(countEl)countEl.textContent=`${products.length.toString().padStart(2,'0')} PRODUCTS`;applyLang(document.documentElement.lang);syncWishlistButtons();const f=document.querySelector('.filters button.active,.filters button.selected');if(f)applyShopFilter(f.dataset.filter||'all');
  },err=>console.error(err));
 }
-async function renderReviewsAdmin(){const wrap=document.getElementById('reviewsAdminList');if(!wrap)return;try{const snap=await getDocs(collection(db,'reviews'));const rs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));const pending=rs.filter(r=>r.approved!==true);const badge=document.getElementById('reviewBadge');if(badge){badge.textContent=pending.length;badge.hidden=pending.length===0}wrap.innerHTML=pending.length?pending.map(r=>`<article class="message-card"><div class="message-card-head"><div class="message-sender"><span class="message-avatar">★</span><div><strong>${escapeHtml(r.name||'Customer')}</strong><small>${escapeHtml(r.productId||'')}</small></div></div><div class="message-meta"><span>${'★'.repeat(Number(r.rating)||5)}</span></div></div><p class="message-body">${escapeHtml(r.comment||'')}</p><div class="message-actions"><button class="btn small-btn" data-approve-review="${escapeHtml(r.id)}">${document.documentElement.lang==='ar'?'نشر التقييم':'Approve & publish'}</button><button class="btn btn-danger small-btn" data-delete-review="${escapeHtml(r.id)}">${document.documentElement.lang==='ar'?'حذف':'Delete'}</button></div></article>`).join(''):`<div class="empty-admin"><span>✓</span><h2>${document.documentElement.lang==='ar'?'لا توجد تقييمات معلقة':'No pending reviews'}</h2><p>${document.documentElement.lang==='ar'?'كل التقييمات تمت مراجعتها.':'All reviews have been moderated.'}</p></div>`;wrap.querySelectorAll('[data-approve-review]').forEach(b=>b.onclick=async()=>{await updateDoc(doc(db,'reviews',b.dataset.approveReview),{approved:true,approvedAt:serverTimestamp()});await renderReviewsAdmin();showToast('تم نشر التقييم.','Review published.')});wrap.querySelectorAll('[data-delete-review]').forEach(b=>b.onclick=async()=>{if(!confirm(document.documentElement.lang==='ar'?'حذف التقييم؟':'Delete review?'))return;await deleteDoc(doc(db,'reviews',b.dataset.deleteReview));await renderReviewsAdmin();showToast('تم حذف التقييم.','Review deleted.')})}catch(e){console.error(e)}}
+async function renderReviewsAdmin(){const wrap=document.getElementById('reviewsAdminList');if(!wrap)return;try{const snap=await getDocs(collection(db,'reviews'));const rs=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));const pending=rs.filter(r=>r.approved!==true);const badge=document.getElementById('reviewBadge');if(badge){badge.textContent=pending.length;badge.hidden=pending.length===0}wrap.innerHTML=pending.length?pending.map(r=>`<article class="message-card"><div class="message-card-head"><div class="message-sender"><span class="message-avatar">★</span><div><strong>${escapeHtml(r.name||'Customer')}</strong><small>${escapeHtml(r.productId||'')}</small></div></div><div class="message-meta"><span>${'★'.repeat(Number(r.rating)||5)}</span></div></div><p class="message-body">${escapeHtml(r.comment||'')}</p><div class="message-actions"><button class="btn small-btn" data-approve-review="${r.id}">${document.documentElement.lang==='ar'?'نشر التقييم':'Approve & publish'}</button><button class="btn btn-danger small-btn" data-delete-review="${r.id}">${document.documentElement.lang==='ar'?'حذف':'Delete'}</button></div></article>`).join(''):`<div class="empty-admin"><span>✓</span><h2>${document.documentElement.lang==='ar'?'لا توجد تقييمات معلقة':'No pending reviews'}</h2><p>${document.documentElement.lang==='ar'?'كل التقييمات تمت مراجعتها.':'All reviews have been moderated.'}</p></div>`;wrap.querySelectorAll('[data-approve-review]').forEach(b=>b.onclick=async()=>{await updateDoc(doc(db,'reviews',b.dataset.approveReview),{approved:true,approvedAt:serverTimestamp()});await renderReviewsAdmin();showToast('تم نشر التقييم.','Review published.')});wrap.querySelectorAll('[data-delete-review]').forEach(b=>b.onclick=async()=>{if(!confirm(document.documentElement.lang==='ar'?'حذف التقييم؟':'Delete review?'))return;await deleteDoc(doc(db,'reviews',b.dataset.deleteReview));await renderReviewsAdmin();showToast('تم حذف التقييم.','Review deleted.')})}catch(e){console.error(e)}}
 function bindReviewForm(page,productId){
  const form=page?.querySelector('#reviewForm');if(!form||form.dataset.bound)return;
  form.dataset.bound='1';
@@ -1564,10 +1555,10 @@ async function initProductFromFirestore(){
  const page=document.querySelector('.product-page');if(!page)return;const id=new URLSearchParams(location.search).get('id');if(!id)return;
  try{const snap=await getDoc(doc(db,'products',id));if(!snap.exists())return;const p={id:snap.id,...snap.data()};let first=true;onSnapshot(doc(db,'products',id),ns=>{if(first){first=false;return}if(!ns.exists())return;const np={id:ns.id,...ns.data()};page._product=np;const n=page.querySelector('.detail-copy h1'),pr=page.querySelector('.price'),im=page.querySelector('.detail-art img');if(n)n.textContent=np.name||'';if(pr)pr.textContent=`${Number(np.price||0).toLocaleString()} EGP`;if(im&&np.image&&im.getAttribute('src')!==np.image)im.src=np.image;updateVariantStock();});const img=page.querySelector('.detail-art img'),name=page.querySelector('.detail-copy h1'),price=page.querySelector('.price');if(img){img.src=p.image||'../Images/product-black.jpg';img.alt=p.name||''}if(name)name.textContent=p.name||'';if(price)price.textContent=`${Number(p.price||0).toLocaleString()} EGP`;page._product=p;
   const sizes=[...new Set((p.variants||[]).map(v=>v.size))],colors=[...new Set((p.variants||[]).map(v=>v.color))],sizeWrap=page.querySelector('.sizes'),colorWrap=page.querySelector('.color-options');
-  if(sizeWrap)sizeWrap.innerHTML=(sizes.length?sizes:['S','M','L','XL']).map((s,i)=>`<button type="button" class="${i===0?'selected':''}">${escapeHtml(s)}</button>`).join('');
+  if(sizeWrap)sizeWrap.innerHTML=(sizes.length?sizes:['S','M','L','XL']).map((s,i)=>`<button type="button" class="${i===0?'selected':''}">${s}</button>`).join('');
   const gallery=page.querySelector('.product-gallery');if(gallery){const imgs=[p.image,...(p.images||[])].filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i);gallery.innerHTML=imgs.map((src,i)=>`<button type="button" class="gallery-thumb ${i===0?'active':''}" data-gallery-src="${escapeHtml(src)}"><img src="${escapeHtml(src)}" alt="${escapeHtml(p.name||'')}"></button>`).join('');gallery.querySelectorAll('[data-gallery-src]').forEach(b=>b.onclick=()=>{img.src=b.dataset.gallerySrc;gallery.querySelectorAll('.gallery-thumb').forEach(x=>x.classList.toggle('active',x===b))})}
   initReviews(page,p.id);
-  if(colorWrap)colorWrap.innerHTML=(colors.length?colors:['شامبين']).map((c,i)=>`<button type="button" class="color-option ${i===0?'selected':''}" data-color="${escapeHtml(c)}" style="--c:#d9c5a1" aria-label="${escapeHtml(c)}"><i></i><span>${escapeHtml(c)}</span></button>`).join('');
+  if(colorWrap)colorWrap.innerHTML=(colors.length?colors:['شامبين']).map((c,i)=>`<button type="button" class="color-option ${i===0?'selected':''}" data-color="${c}" style="--c:#d9c5a1" aria-label="${c}"><i></i><span>${c}</span></button>`).join('');
   initProductPage();
  }catch(e){console.error(e)}
 }
@@ -1582,7 +1573,7 @@ async function initCustomerAccount(){
    loginView.hidden=true;dash.hidden=false; updateAccountLinks(); await renderCustomerAccount();
  }
  loginForm?.addEventListener('submit',async e=>{e.preventDefault();try{const f=new FormData(loginForm);const c=await signInWithEmailAndPassword(auth,String(f.get('email')).trim(),String(f.get('password')));await enter(c.user)}catch(err){console.error(err);setStatus('بيانات الدخول غير صحيحة.','Incorrect email or password.')}});
- signupForm?.addEventListener('submit',async e=>{e.preventDefault();try{const f=new FormData(signupForm);const email=String(f.get('email')).trim(),password=String(f.get('password')),name=String(f.get('name')).trim();if(password.length<10||!/[A-Za-z]/.test(password)||!/\d/.test(password)){setStatus('كلمة المرور يجب ألا تقل عن 10 أحرف وتحتوي على حروف وأرقام.','Password must be at least 10 characters with letters and numbers.');return}const c=await createUserWithEmailAndPassword(auth,email,password);await persistCustomerProfile({name,email,phone:String(f.get('phone')||'').trim(),wishlist:getWishlist()});await enter(c.user)}catch(err){console.error(err);setStatus('تعذر إنشاء الحساب. قد يكون البريد مستخدمًا بالفعل.','Could not create the account. The email may already be in use.')}});
+ signupForm?.addEventListener('submit',async e=>{e.preventDefault();try{const f=new FormData(signupForm);const email=String(f.get('email')).trim(),password=String(f.get('password')),name=String(f.get('name')).trim();if(password.length<6){setStatus('كلمة المرور يجب أن تكون 6 أحرف على الأقل.','Password must be at least 6 characters.');return}const c=await createUserWithEmailAndPassword(auth,email,password);await persistCustomerProfile({name,email,phone:String(f.get('phone')||'').trim(),wishlist:getWishlist()});await enter(c.user)}catch(err){console.error(err);setStatus('تعذر إنشاء الحساب. قد يكون البريد مستخدمًا بالفعل.','Could not create the account. The email may already be in use.')}});
  googleBtn?.addEventListener('click',async()=>{try{const c=await signInWithPopup(auth,googleProvider);await enter(c.user)}catch(err){console.error(err);setStatus('تعذر تسجيل الدخول بحساب Google.','Google sign-in failed.')}});
  document.getElementById('accountLogout')?.addEventListener('click',async()=>{await signOut(auth);currentCustomer=null;loginView.hidden=false;dash.hidden=true;updateAccountLinks();});
  onAuthStateChanged(auth,async user=>{if(user && root.dataset.booted!=='1'){root.dataset.booted='1';await enter(user)}else if(!user){loginView.hidden=false;dash.hidden=true;}});
@@ -1597,7 +1588,6 @@ async function renderCustomerAccount(){
 }
 document.addEventListener('DOMContentLoaded',()=>{
  updateThemeIcon();applyLang(localStorage.getItem('laveraLang')||'ar');
- document.querySelectorAll('[data-refresh]').forEach(b=>b.addEventListener('click',()=>({orders:renderOrders,messages:renderMessages,reviews:renderReviewsAdmin})[b.dataset.refresh]?.()));
  document.getElementById('themeBtn')?.addEventListener('click',setTheme);
  document.getElementById('langBtn')?.addEventListener('click',()=>showLanguageTransition(document.documentElement.lang==='ar'?'en':'ar'));
  document.getElementById('menuBtn')?.addEventListener('click',()=>document.getElementById('mobileMenu')?.classList.toggle('open'));

@@ -1,15 +1,17 @@
 <!DOCTYPE html>
 
 <html data-theme="light" dir="rtl" lang="ar">
-<head><script src="../js/security.js"></script>
+<head>
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <title>LAVÉRA — Dashboard</title>
 <link href="https://fonts.googleapis.com" rel="preconnect"/>
-<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;500;600;700&family=Cormorant+Garamond:wght@400;500;600;700&family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&amp;family=Cairo:wght@400;500;600;700;800&amp;family=Outfit:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
 <link href="../css/style.css" rel="stylesheet"/>
 <link href="../css/lavera-premium.css" rel="stylesheet"/>
-<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link href="../css/lavera-fresh.css" rel="stylesheet"/>
+<link href="../css/lavera-themes.css" rel="stylesheet"/>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg">
 </head>
 <body class="dashboard-body" data-title-ar="LAVÉRA — لوحة التحكم" data-title-en="LAVÉRA — Dashboard">
 <div aria-hidden="true" class="lavera-initial-loader" id="laveraInitialLoader">
@@ -285,7 +287,7 @@
 <button class="btn btn-outline small-btn" data-ar="استعراض الطلبات" data-en="Explore orders" id="exploreOrders">
               استعراض الطلبات
             </button>
-<button class="btn btn-outline small-btn" data-refresh="orders" type="button">
+<button class="btn btn-outline small-btn" onclick="renderOrders()" type="button">
               ↻
               <span data-ar="تحديث" data-en="Refresh">
                 تحديث
@@ -307,7 +309,7 @@
               كل رسالة من نموذج التواصل تظهر هنا مع عداد للرسائل غير المقروءة.
             </p>
 </div>
-<button class="btn btn-outline small-btn" data-refresh="messages" type="button">
+<button class="btn btn-outline small-btn" onclick="renderMessages()" type="button">
             ↻
             <span data-ar="تحديث" data-en="Refresh">
               تحديث
@@ -323,7 +325,7 @@
 <section class="dash-section" id="section-chats">
 <div class="section-toolbar"><div><span class="eyebrow">LIVE CHAT</span><h2 data-ar="الشات المباشر" data-en="Live chat">الشات المباشر</h2></div></div>
 <div class="lv-admin-chat"><aside><input id="chatSearch" class="lv-search" placeholder="بحث / Search"><div id="chatConvList"></div></aside>
-<div class="lv-admin-main"><div id="chatAdminHead" class="lv-admin-head"><span class="muted" data-ar="اختاري محادثة" data-en="Select a conversation">اختاري محادثة</span></div><div id="chatAdminThread" class="lv-thread"></div><form id="chatAdminForm" hidden><input maxlength="1000" autocomplete="off" placeholder="اكتب ردك… / Type a reply…"><button class="btn" type="submit">↗</button></form></div></div>
+<div class="lv-admin-main"><div id="chatAdminHead" class="lv-admin-head"><span class="muted">اختاري محادثة · Select a conversation</span></div><div id="chatAdminThread" class="lv-thread"></div><form id="chatAdminForm" hidden><input maxlength="1000" autocomplete="off" placeholder="اكتب ردك… / Type a reply…"><button class="btn" type="submit">↗</button></form></div></div>
 </section>
 <!-- REVIEWS -->
 <section class="dash-section" id="section-reviews">
@@ -337,7 +339,7 @@
               راجع تقييمات العميلات قبل نشرها على صفحات المنتجات.
             </p>
 </div>
-<button class="btn btn-outline small-btn" data-refresh="reviews" type="button">
+<button class="btn btn-outline small-btn" onclick="renderReviewsAdmin()" type="button">
             ↻
             <span data-ar="تحديث" data-en="Refresh">
               تحديث
@@ -701,5 +703,5 @@
 <script defer src="../lavera-i18n.js"></script>
 <script src="../js/app.js" type="module"></script>
 <script src="../lavera-sounds.js"></script>
-<script src="../js/lavera-2-features.js" type="module"></script><script src="../js/lavera-chat.js" type="module"></script><script defer src="../js/lavera-premium.js"></script></body>
+<script src="../js/lavera-2-features.js" type="module"></script><script src="../js/lavera-chat.js" type="module"></script><script defer src="../js/lavera-premium.js"></script><script defer src="../js/lavera-themes.js"></script></body>
 </html>

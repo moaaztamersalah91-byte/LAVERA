@@ -4,9 +4,7 @@
     "pages/about.html": [],
     "pages/account.html": [],
     "pages/admin-login.html": [],
-    "pages/admin.html": [
-      "اختاري محادثة · Select a conversation"
-    ],
+    "pages/admin.html": [],
     "pages/cart.html": [],
     "pages/checkout.html": [],
     "pages/contact.html": [],
@@ -17,14 +15,9 @@
     "pages/shop.html": [],
     "pages/wishlist.html": []
   },
-  "missing": [
-    [
-      "pages/admin.html",
-      "اختاري محادثة · Select a conversation"
-    ]
-  ],
+  "missing": [],
   "summary": {
     "html_pages": 14,
-    "missing_translations": 1
+    "missing_translations": 0
   }
 }

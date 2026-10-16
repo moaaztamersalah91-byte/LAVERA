@@ -20,91 +20,46 @@ service cloud.firestore {
       // Admins keep full product-management access.
       allow update: if isAdmin() || (
         request.resource.data.lastStockOrderId is string &&
-        request.resource.data.variants is list && request.resource.data.variants.size() <= 100 &&
         request.resource.data.lastStockOrderId != resource.data.lastStockOrderId &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['variants', 'updatedAt', 'lastStockOrderId']) &&
-        getAfter(/databases/$(database)/documents/orders/$(request.resource.data.lastStockOrderId)).data.customerUid == request.auth.uid &&
-        getAfter(/databases/$(database)/documents/orders/$(request.resource.data.lastStockOrderId)).data.status == 'pending' &&
-        getAfter(/databases/$(database)/documents/orders/$(request.resource.data.lastStockOrderId)).data.stockDecremented == true &&
         getAfter(/databases/$(database)/documents/orders/$(request.resource.data.lastStockOrderId)).data.stockChanges[productId] is map
       );
     }
 
     match /orders/{orderId} {
       // Checkout is available only to signed-in customers.
-      allow create: if request.auth != null &&
-        request.resource.data.keys().hasOnly([
-          'customerUid','customer','items','subtotal','shipping','total','deliveryEstimate',
-          'paymentMethod','paymentStatus','paymentReference','paymentVerified',
-          'stockDecremented','stockChanges','status','orderNumber','createdAt','updatedAt'
-        ]) &&
-        request.resource.data.customerUid == request.auth.uid &&
-        request.resource.data.orderNumber is string && request.resource.data.orderNumber.size() >= 8 && request.resource.data.orderNumber.size() <= 60 &&
-        request.resource.data.createdAt == request.time &&
+      allow create: if request.auth != null && request.resource.data.customerUid == request.auth.uid && request.resource.data.orderNumber is string &&
         request.resource.data.status == 'pending' &&
-        request.resource.data.paymentMethod == 'instapay' &&
-        request.resource.data.paymentStatus == 'pending' &&
-        request.resource.data.paymentVerified == false &&
         request.resource.data.stockDecremented == true &&
         request.resource.data.stockChanges is map &&
-        request.resource.data.items is list && request.resource.data.items.size() > 0 && request.resource.data.items.size() <= 50 &&
-        request.resource.data.customer is map &&
-        request.resource.data.customer.keys().hasOnly(['name','phone','governorate','address','notes']) &&
-        request.resource.data.customer.name is string && request.resource.data.customer.name.size() > 0 && request.resource.data.customer.name.size() <= 100 &&
-        request.resource.data.customer.phone is string && request.resource.data.customer.phone.size() <= 30 &&
-        request.resource.data.customer.governorate is string && request.resource.data.customer.governorate.size() > 0 && request.resource.data.customer.governorate.size() <= 60 &&
-        request.resource.data.customer.address is string && request.resource.data.customer.address.size() <= 500 &&
-        request.resource.data.customer.notes is string && request.resource.data.customer.notes.size() <= 1000 &&
-        request.resource.data.subtotal is number && request.resource.data.subtotal >= 0 && request.resource.data.subtotal <= 1000000 &&
-        request.resource.data.shipping is number && request.resource.data.shipping >= 0 && request.resource.data.shipping <= 10000 &&
-        request.resource.data.total is number && request.resource.data.total == request.resource.data.subtotal + request.resource.data.shipping &&
-        request.resource.data.paymentReference is string && request.resource.data.paymentReference.size() <= 200;
+        request.resource.data.items is list &&
+        request.resource.data.customer is map;
       allow read: if isAdmin() || (request.auth != null && resource.data.customerUid == request.auth.uid);
       allow update, delete: if isAdmin();
     }
 
     match /messages/{messageId} {
-      allow create: if request.auth != null &&
-        request.resource.data.keys().hasOnly(['customerUid','name','email','message','read','createdAt','customerReply','customerReplyAt']) &&
-        request.resource.data.customerUid == request.auth.uid &&
-        request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100 &&
-        request.resource.data.email is string && request.resource.data.email.size() <= 254 &&
-        request.resource.data.message is string && request.resource.data.message.size() > 0 && request.resource.data.message.size() <= 3000 &&
-        request.resource.data.read == false;
+      allow create: if request.auth != null && request.resource.data.customerUid == request.auth.uid && request.resource.data.name is string && request.resource.data.email is string && request.resource.data.message is string && request.resource.data.read == false;
       allow read: if isAdmin() || (request.auth != null && resource.data.customerUid == request.auth.uid);
-      // Only admins may reply or alter moderation/read state. Customers cannot forge admin replies.
-      allow update: if isAdmin() ||
-        (request.auth != null &&
-         resource.data.customerUid == request.auth.uid &&
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readByCustomer']) &&
-         request.resource.data.readByCustomer is bool);
+      allow update: if isAdmin() || (request.auth != null && resource.data.customerUid == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['customerReply','customerReplyAt']));
       allow delete: if isAdmin() || (request.auth != null && resource.data.customerUid == request.auth.uid);
     }
 
     match /customers/{uid} {
-      allow read: if isAdmin() || (request.auth != null && request.auth.uid == uid);
-      allow create, update: if request.auth != null && request.auth.uid == uid &&
-        request.resource.data.uid == uid &&
-        request.resource.data.keys().size() <= 30 &&
-        (!('email' in request.resource.data) || (request.resource.data.email is string && request.resource.data.email.size() <= 254)) &&
-        (!('name' in request.resource.data) || (request.resource.data.name is string && request.resource.data.name.size() <= 100)) &&
-        (!('phone' in request.resource.data) || (request.resource.data.phone is string && request.resource.data.phone.size() <= 30));
+      allow read: if isAdmin();
+      allow create, read, update: if request.auth != null && request.auth.uid == uid;
       allow delete: if request.auth != null && request.auth.uid == uid;
     }
 
     match /chats/{uid} {
       allow read: if isAdmin() || (request.auth != null && request.auth.uid == uid);
       allow create, update: if isAdmin() || (request.auth != null && request.auth.uid == uid &&
-        (!('lastMessage' in request.resource.data) || (request.resource.data.lastMessage is string && request.resource.data.lastMessage.size() <= 1000)) &&
         request.resource.data.diff(resource == null ? {} : resource.data).affectedKeys().hasOnly(['customerUid','lastMessage','lastAt','unreadAdmin','unreadCustomer']));
       allow delete: if isAdmin();
 
       match /messages/{mid} {
         allow read: if isAdmin() || (request.auth != null && request.auth.uid == uid);
-        allow create: if request.auth != null &&
-          request.resource.data.keys().hasOnly(['text','uid','from','createdAt']) &&
-          request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1000 &&
-          request.resource.data.uid == request.auth.uid && (
+        allow create: if request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1000 && request.resource.data.uid == request.auth.uid && (
           (request.auth.uid == uid && request.resource.data.from == 'customer') ||
           (isAdmin() && request.resource.data.from == 'admin'));
         allow update: if false;
@@ -117,15 +72,7 @@ service cloud.firestore {
     }
 
     match /reviews/{reviewId} {
-      allow create: if request.auth != null &&
-        request.resource.data.keys().hasOnly(['customerUid','productId','name','rating','comment','approved','createdAt']) &&
-        request.resource.data.customerUid == request.auth.uid &&
-        request.resource.data.productId is string && request.resource.data.productId.size() > 0 && request.resource.data.productId.size() <= 150 &&
-        request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 100 &&
-        request.resource.data.comment is string && request.resource.data.comment.size() > 0 && request.resource.data.comment.size() <= 2000 &&
-        request.resource.data.rating is number && request.resource.data.rating >= 1 && request.resource.data.rating <= 5 &&
-        request.resource.data.createdAt == request.time &&
-        request.resource.data.approved == false;
+      allow create: if request.auth != null && request.resource.data.customerUid == request.auth.uid && request.resource.data.productId is string && request.resource.data.name is string && request.resource.data.comment is string && request.resource.data.rating is number && request.resource.data.rating >= 1 && request.resource.data.rating <= 5 && request.resource.data.approved == false;
       allow read: if resource.data.approved == true || isAdmin();
       allow update, delete: if isAdmin();
     }
@@ -135,8 +82,7 @@ service cloud.firestore {
       allow create: if isAdmin();
       allow read: if request.auth != null && resource.data.customerUid == request.auth.uid;
       allow update: if request.auth != null && resource.data.customerUid == request.auth.uid &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read','readAt']) &&
-        request.resource.data.read is bool;
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read','readAt']);
       allow delete: if isAdmin();
     }
 
